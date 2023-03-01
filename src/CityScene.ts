@@ -97,7 +97,6 @@ export default class CityScene extends THREE.Scene {
     plane.rotation.x = -0.5 * Math.PI;
     plane.position.set(numCols / 2 - 0.5, 0, numRows / 2 - 0.5);
     plane.receiveShadow = true;
-    this.add(plane);
 
     this.carModels.push(await this.loadObject("assets/cars/firetruck.glb"));
     this.carModels.push(await this.loadObject("assets/cars/ambulance.glb"));
@@ -154,6 +153,7 @@ export default class CityScene extends THREE.Scene {
 
     // spawn road tiles
     this.position.set(-(numCols - 1) / 2, 0, -(numRows - 1) / 2);
+    this.add(plane);
     for (let row = 0; row < numRows; row++) {
       for (let col = 0; col < numCols; col++) {
         switch (this.getTile(row, col)) {

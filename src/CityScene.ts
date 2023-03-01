@@ -50,13 +50,17 @@ class Car {
   public col: number = 0;
   public dir: Dir = Dir.N;
   public nextDir: Dir = Dir.N;
-  public counter: number = 0;
+  public speed: number = 0;
+  public distance: number = 0;
 
   constructor(object: THREE.Object3D, row: number, col: number) {
     this.object = object;
     this.row = row;
     this.col = col;
     this.object.position.set(this.col, 0, this.row);
+    const minSpeed = 1.0 / 120.0;
+    const maxSpeed = 1.0 / 20.0;
+    this.speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
   }
 
   // -1: left turn, 0: going straight, 1: right turn
@@ -66,6 +70,12 @@ class Car {
     if (turn < -1) turn += 4;
     return turn;
   }
+}
+
+function getTurnDistance(turn: number): number {
+  if (turn === -1) return 0.7 * 0.5 * Math.PI;
+  else if (turn === 1) return 0.3 * 0.5 * Math.PI;
+  return 1; // turn === 0
 }
 
 export default class CityScene extends THREE.Scene {
@@ -233,9 +243,10 @@ export default class CityScene extends THREE.Scene {
 
   update() {
     for (let car of this.cars) {
-      car.counter++;
-      if (car.counter > 30) {
-        car.counter = 30;
+      let turn = car.getTurn();
+      let turnDistance = getTurnDistance(turn);
+      car.distance += car.speed;
+      if (car.distance > turnDistance) {
         if (car.nextDir === Dir.N) car.row -= 1;
         if (car.nextDir === Dir.E) car.col += 1;
         if (car.nextDir === Dir.S) car.row += 1;
@@ -249,12 +260,16 @@ export default class CityScene extends THREE.Scene {
         if (car.dir !== getOppositeDir(Dir.E) && isFree(car.row, car.col + 1)) options.push(Dir.E);
         if (car.dir !== getOppositeDir(Dir.S) && isFree(car.row + 1, car.col)) options.push(Dir.S);
         if (car.dir !== getOppositeDir(Dir.W) && isFree(car.row, car.col - 1)) options.push(Dir.W);
-        if (options.length === 0) continue;
+        if (options.length === 0) {
+          car.distance = turnDistance;
+          continue;
+        }
         car.nextDir = options[randomInt(options.length)];
-        car.counter = 0;
+        car.distance -= turnDistance;
+        turn = car.getTurn();
+        turnDistance = getTurnDistance(turn);
       }
-      const alpha = car.counter / 30.0;
-      const turn = car.getTurn();
+      const alpha = car.distance / turnDistance;
       let x = 0;
       let y = 0;
       if (turn === 0) {

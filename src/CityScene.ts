@@ -19,6 +19,27 @@ enum Dir {
 const numRows = 13;
 const numCols = 13;
 
+const carNames = [
+  "firetruck",
+  "ambulance",
+  "delivery",
+  "deliveryFlat",
+  "garbageTruck",
+  "hatchbackSports",
+  "police",
+  "sedan",
+  "sedanSports",
+  "suv",
+  "suvLuxury",
+  "taxi",
+  "tractor",
+  "tractorShovel",
+  // "tractorPolice",
+  "truck",
+  "truckFlat",
+  "van",
+];
+
 class Car {
   public object: THREE.Object3D;
   public row: number = 0;
@@ -98,24 +119,7 @@ export default class CityScene extends THREE.Scene {
     plane.position.set(numCols / 2 - 0.5, 0, numRows / 2 - 0.5);
     plane.receiveShadow = true;
 
-    this.carModels.push(await this.loadObject("assets/cars/firetruck.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/ambulance.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/delivery.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/deliveryFlat.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/garbageTruck.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/hatchbackSports.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/police.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/sedan.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/sedanSports.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/suv.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/suvLuxury.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/taxi.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/tractor.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/tractorShovel.glb"));
-    // this.carModels.push(await this.loadObject("assets/cars/tractorPolice.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/truck.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/truckFlat.glb"));
-    this.carModels.push(await this.loadObject("assets/cars/van.glb"));
+    this.carModels = await Promise.all(carNames.map((name) => this.loadObject("assets/cars/" + name + ".glb")));
     this.carModels.forEach((car) => car.scale.setScalar(0.15));
     const roadCrossroad = await this.loadObject("assets/roads/road_crossroadPath.glb");
     const roadBend = await this.loadObject("assets/roads/road_bend.glb");

@@ -1,24 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-const attachCameraToCar = false;
-
-enum Tile {
-  None,
-  Street,
-  House,
-}
-
-enum Dir {
-  N,
-  E,
-  S,
-  W,
-}
-
-const numRows = 13;
-const numCols = 13;
-
 const carNames = [
   "firetruck",
   "ambulance",
@@ -40,6 +22,28 @@ const carNames = [
   "van",
 ];
 
+const attachCameraToCar = false;
+
+enum Tile {
+  None,
+  Street,
+  House,
+}
+
+enum Dir {
+  N,
+  E,
+  S,
+  W,
+}
+
+function getOppositeDir(dir: Dir): Dir {
+  return (dir + 2) % 4;
+}
+
+const numRows = 13;
+const numCols = 13;
+
 class Car {
   public object: THREE.Object3D;
   public row: number = 0;
@@ -53,6 +57,14 @@ class Car {
     this.row = row;
     this.col = col;
     this.object.position.set(this.col, 0, this.row);
+  }
+
+  // -1: left turn, 0: going straight, 1: right turn
+  getTurn(): number {
+    let turn = this.nextDir - this.dir;
+    if (turn > 1) turn -= 4;
+    if (turn < -1) turn += 4;
+    return turn;
   }
 }
 
@@ -208,8 +220,13 @@ export default class CityScene extends THREE.Scene {
       row = randomInt(numRows);
       col = randomInt(numCols);
     } while (this.getTile(row, col) !== Tile.Street);
+    const dirs = [];
+    if (this.getTile(row - 1, col) === Tile.Street) dirs.push(Dir.N);
+    if (this.getTile(row, col + 1) === Tile.Street) dirs.push(Dir.E);
+    if (this.getTile(row + 1, col) === Tile.Street) dirs.push(Dir.S);
+    if (this.getTile(row, col - 1) === Tile.Street) dirs.push(Dir.W);
     let car = new Car(object, row, col);
-    car.nextDir = car.dir = Dir.E;
+    car.dir = car.nextDir = dirs[randomInt(dirs.length)];
     this.add(car.object);
     this.cars.push(car);
   }
@@ -218,8 +235,7 @@ export default class CityScene extends THREE.Scene {
     for (let car of this.cars) {
       car.counter++;
       if (car.counter > 30) {
-        car.counter = 0;
-
+        car.counter = 30;
         if (car.nextDir === Dir.N) car.row -= 1;
         if (car.nextDir === Dir.E) car.col += 1;
         if (car.nextDir === Dir.S) car.row += 1;
@@ -228,16 +244,17 @@ export default class CityScene extends THREE.Scene {
 
         // choose next tile
         let options: Dir[] = [];
-        if (this.getTile(car.row - 1, car.col) === Tile.Street && car.dir !== Dir.S) options.push(Dir.N);
-        if (this.getTile(car.row, car.col + 1) === Tile.Street && car.dir !== Dir.W) options.push(Dir.E);
-        if (this.getTile(car.row + 1, car.col) === Tile.Street && car.dir !== Dir.N) options.push(Dir.S);
-        if (this.getTile(car.row, car.col - 1) === Tile.Street && car.dir !== Dir.E) options.push(Dir.W);
+        const isFree = (row: number, col: number) => this.getTile(row, col) === Tile.Street;
+        if (car.dir !== getOppositeDir(Dir.N) && isFree(car.row - 1, car.col)) options.push(Dir.N);
+        if (car.dir !== getOppositeDir(Dir.E) && isFree(car.row, car.col + 1)) options.push(Dir.E);
+        if (car.dir !== getOppositeDir(Dir.S) && isFree(car.row + 1, car.col)) options.push(Dir.S);
+        if (car.dir !== getOppositeDir(Dir.W) && isFree(car.row, car.col - 1)) options.push(Dir.W);
+        if (options.length === 0) continue;
         car.nextDir = options[randomInt(options.length)];
+        car.counter = 0;
       }
       const alpha = car.counter / 30.0;
-      let turn = car.nextDir - car.dir;
-      if (turn > 1) turn -= 4;
-      if (turn < -1) turn += 4;
+      const turn = car.getTurn();
       let x = 0;
       let y = 0;
       if (turn === 0) {

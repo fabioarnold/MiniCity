@@ -17,7 +17,7 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.z = 2;
-camera.position.y = 12; //* 0.1;
+camera.position.y = 12;
 camera.lookAt(new THREE.Vector3(0, 0, 0.5));
 
 const controls = new FirstPersonControls(camera, renderer.domElement);

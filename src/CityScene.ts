@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
+const debug = true;
+
 const carNames = [
   "firetruck",
   "ambulance",
@@ -37,27 +39,56 @@ enum Dir {
   W,
 }
 
-function getOppositeDir(dir: Dir): Dir {
+class Pos {
+  row: number;
+  col: number;
+
+  constructor(row?: number, col?: number) {
+    this.row = row ?? 0;
+    this.col = col ?? 0;
+  }
+
+  clone(): Pos {
+    return new Pos(this.row, this.col);
+  }
+
+  set(row: number, col: number) {
+    this.row = row;
+    this.col = col;
+  }
+
+  step(dir: Dir): this {
+    if (dir === Dir.N) this.row -= 1;
+    if (dir === Dir.E) this.col += 1;
+    if (dir === Dir.S) this.row += 1;
+    if (dir === Dir.W) this.col -= 1;
+    return this;
+  }
+}
+
+function flipDir(dir: Dir): Dir {
   return (dir + 2) % 4;
 }
 
-const numRows = 13;
-const numCols = 13;
+const blockSize = 3;
+const numBlocks = debug ? 2 : 3;
+const numRows = numBlocks * (1 + blockSize) + 1;
+const numCols = numRows;
+const numCars = debug ? 2 : 20;
 
 class Car {
-  public object: THREE.Object3D;
-  public row: number = 0;
-  public col: number = 0;
-  public dir: Dir = Dir.N;
-  public nextDir: Dir = Dir.N;
-  public speed: number = 0;
-  public distance: number = 0;
+  object: THREE.Object3D;
+  pos: Pos;
+  dir: Dir = Dir.N;
+  nextDir: Dir = Dir.N;
+  speed: number = 0;
+  distance: number = 0;
+  tileBox: THREE.Box3;
 
-  constructor(object: THREE.Object3D, row: number, col: number) {
+  constructor(object: THREE.Object3D, pos: Pos) {
     this.object = object;
-    this.row = row;
-    this.col = col;
-    this.object.position.set(this.col, 0, this.row);
+    this.pos = pos;
+    this.object.position.set(this.pos.col, 0.01, this.pos.row);
     const minSpeed = 1.0 / 120.0;
     const maxSpeed = 1.0 / 20.0;
     this.speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
@@ -95,7 +126,7 @@ export default class CityScene extends THREE.Scene {
     for (let row = 0; row < numRows; row++) {
       this.map[row] = [];
       for (let col = 0; col < numCols; col++) {
-        this.map[row][col] = row % 4 === 0 || col % 4 === 0 ? Tile.Street : Tile.House;
+        this.map[row][col] = row % (blockSize + 1) === 0 || col % (blockSize + 1) === 0 ? Tile.Street : Tile.House;
       }
     }
 
@@ -196,6 +227,7 @@ export default class CityScene extends THREE.Scene {
             break;
           }
           case Tile.House: {
+            if (debug) break;
             const options = [];
             if (this.getTile(row - 1, col) === Tile.Street) options.push(Dir.N);
             if (this.getTile(row, col + 1) === Tile.Street) options.push(Dir.E);
@@ -213,7 +245,7 @@ export default class CityScene extends THREE.Scene {
       }
     }
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < numCars; i++) {
       this.spawnRandomCar();
     }
     if (attachCameraToCar) {
@@ -223,25 +255,45 @@ export default class CityScene extends THREE.Scene {
       this.camera.position.y = 1;
       this.camera.position.z = -1;
     }
+    if (debug) {
+      this.setupScenario(0);
+    }
   }
 
-  private spawnRandomCar() {
+  spawnRandomCar() {
     const object = this.carModels[randomInt(this.carModels.length)].clone();
-    let row = 0;
-    let col = 0;
+    const pos = new Pos();
     do {
-      row = randomInt(numRows);
-      col = randomInt(numCols);
-    } while (this.getTile(row, col) !== Tile.Street);
+      pos.row = randomInt(numRows);
+      pos.col = randomInt(numCols);
+    } while (this.getTile(pos.row, pos.col) !== Tile.Street);
     const dirs = [];
-    if (this.getTile(row - 1, col) === Tile.Street) dirs.push(Dir.N);
-    if (this.getTile(row, col + 1) === Tile.Street) dirs.push(Dir.E);
-    if (this.getTile(row + 1, col) === Tile.Street) dirs.push(Dir.S);
-    if (this.getTile(row, col - 1) === Tile.Street) dirs.push(Dir.W);
-    let car = new Car(object, row, col);
+    if (this.getTile(pos.row - 1, pos.col) === Tile.Street) dirs.push(Dir.N);
+    if (this.getTile(pos.row, pos.col + 1) === Tile.Street) dirs.push(Dir.E);
+    if (this.getTile(pos.row + 1, pos.col) === Tile.Street) dirs.push(Dir.S);
+    if (this.getTile(pos.row, pos.col - 1) === Tile.Street) dirs.push(Dir.W);
+    const car = new Car(object, pos);
     car.dir = car.nextDir = dirs[randomInt(dirs.length)];
     this.add(car.object);
     this.cars.push(car);
+
+    if (debug) {
+      car.tileBox = new THREE.Box3();
+      car.tileBox.setFromCenterAndSize(new THREE.Vector3(), new THREE.Vector3(1, 1, 1));
+      this.add(new THREE.Box3Helper(car.tileBox, new THREE.Color(0xff0000)));
+    }
+  }
+
+  setupScenario(id: number) {
+    const speed = 1.0 / 200.0;
+    if (id === 0) {
+      this.cars[0].speed = speed;
+      this.cars[1].speed = speed;
+      this.cars[0].pos.set(4, 3);
+      this.cars[0].dir = this.cars[0].nextDir = Dir.E;
+      this.cars[1].pos.set(4, 5);
+      this.cars[1].dir = this.cars[1].nextDir = Dir.W;
+    }
   }
 
   update() {
@@ -254,49 +306,52 @@ export default class CityScene extends THREE.Scene {
     let turn = car.getTurn();
     let turnDistance = getTurnDistance(turn);
     car.distance += car.speed;
+
     if (car.distance > turnDistance) {
-      if (car.nextDir === Dir.N) car.row -= 1;
-      if (car.nextDir === Dir.E) car.col += 1;
-      if (car.nextDir === Dir.S) car.row += 1;
-      if (car.nextDir === Dir.W) car.col -= 1;
+      // move to next tile along nextDir
+      car.pos.step(car.nextDir);
       car.dir = car.nextDir;
 
-      // choose next tile
-      let options: Dir[] = [];
-      const isFree = (row: number, col: number) => this.getTile(row, col) === Tile.Street;
-      if (car.dir !== getOppositeDir(Dir.N) && isFree(car.row - 1, car.col)) options.push(Dir.N);
-      if (car.dir !== getOppositeDir(Dir.E) && isFree(car.row, car.col + 1)) options.push(Dir.E);
-      if (car.dir !== getOppositeDir(Dir.S) && isFree(car.row + 1, car.col)) options.push(Dir.S);
-      if (car.dir !== getOppositeDir(Dir.W) && isFree(car.row, car.col - 1)) options.push(Dir.W);
+      // choose next direction
+      const isFree = (pos: Pos) => this.getTile(pos.row, pos.col) === Tile.Street;
+      let options = [Dir.N, Dir.E, Dir.S, Dir.W].filter(
+        (dir) => car.dir !== flipDir(dir) && isFree(car.pos.clone().step(dir))
+      );
       if (options.length === 0) {
         car.distance = turnDistance;
         return;
       }
-      car.nextDir = options[randomInt(options.length)];
       car.distance -= turnDistance;
-      turn = car.getTurn();
-      turnDistance = getTurnDistance(turn);
+      car.nextDir = options[randomInt(options.length)];
     }
-    const alpha = car.distance / turnDistance;
-    let x = 0;
-    let y = 0;
-    if (turn === 0) {
-      x = 0.2;
-      y = 0.5 - alpha;
-    } else if (turn === -1) {
-      x = -0.5 + 0.7 * Math.cos(alpha * 0.5 * Math.PI);
-      y = 0.5 - 0.7 * Math.sin(alpha * 0.5 * Math.PI);
-    } else if (turn === 1) {
-      x = 0.5 - 0.3 * Math.cos(alpha * 0.5 * Math.PI);
-      y = 0.5 - 0.3 * Math.sin(alpha * 0.5 * Math.PI);
+
+    const anim = carTurnAnimation(car);
+    car.object.position.set(car.pos.col + anim.x, 0.01, car.pos.row + anim.y);
+    car.object.rotation.y = anim.angle;
+    if (debug) {
+      car.tileBox.setFromCenterAndSize(new THREE.Vector3(car.pos.col, 0, car.pos.row), new THREE.Vector3(1, 1, 1));
     }
-    const angle = 0.5 * Math.PI * car.dir;
-    const r = rotate2D(x, y, angle);
-    x = r.x;
-    y = r.y;
-    car.object.position.set(car.col + x, 0.01, car.row + y);
-    car.object.rotation.y = -angle + -alpha * turn * 0.5 * Math.PI;
   }
+}
+
+function carTurnAnimation(car: Car): { x: number; y: number; angle: number } {
+  const turn = car.getTurn();
+  const turnDistance = getTurnDistance(turn);
+  const alpha = car.distance / turnDistance;
+  let x = 0;
+  let y = 0;
+  if (turn === 0) {
+    x = 0.2;
+    y = 0.5 - alpha;
+  } else if (turn === -1) {
+    x = -0.5 + 0.7 * Math.cos(alpha * 0.5 * Math.PI);
+    y = 0.5 - 0.7 * Math.sin(alpha * 0.5 * Math.PI);
+  } else if (turn === 1) {
+    x = 0.5 - 0.3 * Math.cos(alpha * 0.5 * Math.PI);
+    y = 0.5 - 0.3 * Math.sin(alpha * 0.5 * Math.PI);
+  }
+  const angle = 0.5 * Math.PI * car.dir;
+  return { ...rotate2D(x, y, angle), angle: -angle - alpha * turn * 0.5 * Math.PI };
 }
 
 function rotate2D(x: number, y: number, angle: number): { x: number; y: number } {

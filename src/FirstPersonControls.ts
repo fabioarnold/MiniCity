@@ -19,7 +19,7 @@ export class FirstPersonControls {
   }
 
   updateTranslation() {
-    const speed = 0.1;
+    const speed = this.controller.keys.has("shift") ? 0.2 : 0.04;
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.rotation);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.rotation);
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.rotation);
@@ -32,11 +32,16 @@ export class FirstPersonControls {
   }
 
   updateRotation() {
+    const speed = 0.03;
+    if (this.controller.keys.has("arrowup")) this.theta += speed;
+    if (this.controller.keys.has("arrowdown")) this.theta -= speed;
+    if (this.controller.keys.has("arrowleft")) this.phi += speed;
+    if (this.controller.keys.has("arrowright")) this.phi -= speed;
     if (this.controller.leftButtonDown) {
-      this.phi -= this.controller.movementX / window.innerWidth;
-      this.theta -= this.controller.movementY / window.innerHeight;
-      this.theta = Math.min(Math.max(this.theta, -0.5 * Math.PI), 0.5 * Math.PI);
+      this.phi -= this.controller.movementX * 0.002;
+      this.theta -= this.controller.movementY * 0.002;
     }
+    this.theta = Math.min(Math.max(this.theta, -0.5 * Math.PI), 0.5 * Math.PI);
     this.controller.movementX = 0;
     this.controller.movementY = 0;
 

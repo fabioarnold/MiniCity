@@ -215,10 +215,13 @@ export default class CityScene extends THREE.Scene {
 
     for (let i = 0; i < 20; i++) {
       this.spawnRandomCar();
-      if (i === 0 && attachCameraToCar) {
-        const car = this.cars[0];
-        car.object.add(this.camera);
-      }
+    }
+    if (attachCameraToCar) {
+      const car = this.cars[0];
+      car.object.add(this.camera);
+      this.camera.rotation.x = 0;
+      this.camera.position.y = 1;
+      this.camera.position.z = -1;
     }
   }
 
@@ -243,52 +246,56 @@ export default class CityScene extends THREE.Scene {
 
   update() {
     for (let car of this.cars) {
-      let turn = car.getTurn();
-      let turnDistance = getTurnDistance(turn);
-      car.distance += car.speed;
-      if (car.distance > turnDistance) {
-        if (car.nextDir === Dir.N) car.row -= 1;
-        if (car.nextDir === Dir.E) car.col += 1;
-        if (car.nextDir === Dir.S) car.row += 1;
-        if (car.nextDir === Dir.W) car.col -= 1;
-        car.dir = car.nextDir;
-
-        // choose next tile
-        let options: Dir[] = [];
-        const isFree = (row: number, col: number) => this.getTile(row, col) === Tile.Street;
-        if (car.dir !== getOppositeDir(Dir.N) && isFree(car.row - 1, car.col)) options.push(Dir.N);
-        if (car.dir !== getOppositeDir(Dir.E) && isFree(car.row, car.col + 1)) options.push(Dir.E);
-        if (car.dir !== getOppositeDir(Dir.S) && isFree(car.row + 1, car.col)) options.push(Dir.S);
-        if (car.dir !== getOppositeDir(Dir.W) && isFree(car.row, car.col - 1)) options.push(Dir.W);
-        if (options.length === 0) {
-          car.distance = turnDistance;
-          continue;
-        }
-        car.nextDir = options[randomInt(options.length)];
-        car.distance -= turnDistance;
-        turn = car.getTurn();
-        turnDistance = getTurnDistance(turn);
-      }
-      const alpha = car.distance / turnDistance;
-      let x = 0;
-      let y = 0;
-      if (turn === 0) {
-        x = 0.2;
-        y = 0.5 - alpha;
-      } else if (turn === -1) {
-        x = -0.5 + 0.7 * Math.cos(alpha * 0.5 * Math.PI);
-        y = 0.5 - 0.7 * Math.sin(alpha * 0.5 * Math.PI);
-      } else if (turn === 1) {
-        x = 0.5 - 0.3 * Math.cos(alpha * 0.5 * Math.PI);
-        y = 0.5 - 0.3 * Math.sin(alpha * 0.5 * Math.PI);
-      }
-      const angle = 0.5 * Math.PI * car.dir;
-      const r = rotate2D(x, y, angle);
-      x = r.x;
-      y = r.y;
-      car.object.position.set(car.col + x, 0.01, car.row + y);
-      car.object.rotation.y = -angle + -alpha * turn * 0.5 * Math.PI;
+      this.updateCar(car);
     }
+  }
+
+  updateCar(car: Car) {
+    let turn = car.getTurn();
+    let turnDistance = getTurnDistance(turn);
+    car.distance += car.speed;
+    if (car.distance > turnDistance) {
+      if (car.nextDir === Dir.N) car.row -= 1;
+      if (car.nextDir === Dir.E) car.col += 1;
+      if (car.nextDir === Dir.S) car.row += 1;
+      if (car.nextDir === Dir.W) car.col -= 1;
+      car.dir = car.nextDir;
+
+      // choose next tile
+      let options: Dir[] = [];
+      const isFree = (row: number, col: number) => this.getTile(row, col) === Tile.Street;
+      if (car.dir !== getOppositeDir(Dir.N) && isFree(car.row - 1, car.col)) options.push(Dir.N);
+      if (car.dir !== getOppositeDir(Dir.E) && isFree(car.row, car.col + 1)) options.push(Dir.E);
+      if (car.dir !== getOppositeDir(Dir.S) && isFree(car.row + 1, car.col)) options.push(Dir.S);
+      if (car.dir !== getOppositeDir(Dir.W) && isFree(car.row, car.col - 1)) options.push(Dir.W);
+      if (options.length === 0) {
+        car.distance = turnDistance;
+        return;
+      }
+      car.nextDir = options[randomInt(options.length)];
+      car.distance -= turnDistance;
+      turn = car.getTurn();
+      turnDistance = getTurnDistance(turn);
+    }
+    const alpha = car.distance / turnDistance;
+    let x = 0;
+    let y = 0;
+    if (turn === 0) {
+      x = 0.2;
+      y = 0.5 - alpha;
+    } else if (turn === -1) {
+      x = -0.5 + 0.7 * Math.cos(alpha * 0.5 * Math.PI);
+      y = 0.5 - 0.7 * Math.sin(alpha * 0.5 * Math.PI);
+    } else if (turn === 1) {
+      x = 0.5 - 0.3 * Math.cos(alpha * 0.5 * Math.PI);
+      y = 0.5 - 0.3 * Math.sin(alpha * 0.5 * Math.PI);
+    }
+    const angle = 0.5 * Math.PI * car.dir;
+    const r = rotate2D(x, y, angle);
+    x = r.x;
+    y = r.y;
+    car.object.position.set(car.col + x, 0.01, car.row + y);
+    car.object.rotation.y = -angle + -alpha * turn * 0.5 * Math.PI;
   }
 }
 

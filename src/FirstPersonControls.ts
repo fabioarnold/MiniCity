@@ -4,12 +4,10 @@ import { InputController } from "./InputController";
 export class FirstPersonControls {
   camera: THREE.Camera;
   controller: InputController;
-  phi: number = 0;
-  theta: number = -0.45 * Math.PI; // -0.02; //
-  rotation: THREE.Quaternion = new THREE.Quaternion();
 
   constructor(camera: THREE.Camera, target: HTMLCanvasElement) {
     this.camera = camera;
+    this.camera.rotation.order = "YXZ";
     this.controller = new InputController(target);
   }
 
@@ -20,9 +18,9 @@ export class FirstPersonControls {
 
   updateTranslation() {
     const speed = this.controller.keys.has("shift") ? 0.2 : 0.04;
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.rotation);
-    const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.rotation);
-    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(this.rotation);
+    const forward = new THREE.Vector3(0, 0, -1);
+    const up = new THREE.Vector3(0, 1, 0);
+    const right = new THREE.Vector3(1, 0, 0);
     if (this.controller.keys.has("w")) this.camera.translateOnAxis(forward, speed);
     if (this.controller.keys.has("s")) this.camera.translateOnAxis(forward.negate(), speed);
     if (this.controller.keys.has("d")) this.camera.translateOnAxis(right, speed);
@@ -33,24 +31,16 @@ export class FirstPersonControls {
 
   updateRotation() {
     const speed = 0.03;
-    if (this.controller.keys.has("arrowup")) this.theta += speed;
-    if (this.controller.keys.has("arrowdown")) this.theta -= speed;
-    if (this.controller.keys.has("arrowleft")) this.phi += speed;
-    if (this.controller.keys.has("arrowright")) this.phi -= speed;
+    if (this.controller.keys.has("arrowup")) this.camera.rotation.x += speed;
+    if (this.controller.keys.has("arrowdown")) this.camera.rotation.x -= speed;
+    if (this.controller.keys.has("arrowleft")) this.camera.rotation.y += speed;
+    if (this.controller.keys.has("arrowright")) this.camera.rotation.y -= speed;
     if (this.controller.leftButtonDown) {
-      this.phi -= this.controller.movementX * 0.002;
-      this.theta -= this.controller.movementY * 0.002;
+      this.camera.rotation.y -= this.controller.movementX * 0.002;
+      this.camera.rotation.x -= this.controller.movementY * 0.002;
     }
-    this.theta = Math.min(Math.max(this.theta, -0.5 * Math.PI), 0.5 * Math.PI);
     this.controller.movementX = 0;
     this.controller.movementY = 0;
-
-    const qx = new THREE.Quaternion();
-    qx.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.phi);
-    const qz = new THREE.Quaternion();
-    qz.setFromAxisAngle(new THREE.Vector3(1, 0, 0), this.theta);
-    this.rotation = new THREE.Quaternion();
-    qx.multiply(qz);
-    this.camera.rotation.setFromQuaternion(qx);
+    this.camera.rotation.x = Math.min(Math.max(this.camera.rotation.x, -0.5 * Math.PI), 0.5 * Math.PI);
   }
 }

@@ -87,7 +87,7 @@ class Car {
   nextDir: Dir = Dir.N;
   speed: number = 0;
   distance: number = 0;
-  tileBox: THREE.Box3;
+  tileBox?: THREE.Box3;
 
   constructor(object: THREE.Object3D, pos: Pos) {
     this.object = object;
@@ -345,7 +345,7 @@ export default class CityScene extends THREE.Scene {
     const anim = carTurnAnimation(car);
     car.object.position.set(car.pos.col + anim.x, 0.01, car.pos.row + anim.y);
     car.object.rotation.y = anim.angle;
-    if (debug) {
+    if (debug && car.tileBox) {
       car.tileBox.setFromCenterAndSize(new THREE.Vector3(car.pos.col, 0, car.pos.row), new THREE.Vector3(1, 1, 1));
     }
   }

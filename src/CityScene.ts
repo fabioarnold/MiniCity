@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-const debug = true;
+const debug = false;
 
 const carNames = [
   "firetruck",
@@ -57,6 +57,10 @@ class Pos {
     this.col = col;
   }
 
+  equals(pos: Pos): boolean {
+    return this.row === pos.row && this.col === pos.col;
+  }
+
   step(dir: Dir): this {
     if (dir === Dir.N) this.row -= 1;
     if (dir === Dir.E) this.col += 1;
@@ -89,8 +93,8 @@ class Car {
     this.object = object;
     this.pos = pos;
     this.object.position.set(this.pos.col, 0.01, this.pos.row);
-    const minSpeed = 1.0 / 120.0;
-    const maxSpeed = 1.0 / 20.0;
+    const minSpeed = 1.0 / 60.0;
+    const maxSpeed = 1.0 / 30.0;
     this.speed = minSpeed + Math.random() * (maxSpeed - minSpeed);
   }
 
@@ -302,14 +306,27 @@ export default class CityScene extends THREE.Scene {
     }
   }
 
+  isBlocked(pos: Pos, dir: Dir): boolean {
+    for (let car of this.cars) {
+      if (pos.equals(car.pos)) {
+        if (dir !== flipDir(car.nextDir)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   updateCar(car: Car) {
     let turn = car.getTurn();
     let turnDistance = getTurnDistance(turn);
-    car.distance += car.speed;
-
+    const nextPos = car.pos.clone().step(car.nextDir);
+    if (car.distance < 0.5 * turnDistance || !this.isBlocked(nextPos, car.nextDir)) {
+      car.distance += car.speed;
+    }
     if (car.distance > turnDistance) {
       // move to next tile along nextDir
-      car.pos.step(car.nextDir);
+      car.pos = nextPos;
       car.dir = car.nextDir;
 
       // choose next direction

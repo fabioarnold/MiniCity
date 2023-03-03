@@ -16,10 +16,27 @@
         height: 100%;
         display: block;
       }
+      a#github-link {
+        position: absolute;
+        top: 0;
+        margin: 12px;
+        padding: 8px 16px;
+        color: #333;
+        background-color: #fff;
+        border: 1px solid #aaa;
+        border-radius: 6px;
+        font-family: sans-serif;
+        font-weight: bold;
+        text-decoration: none;
+      }
+      a:hover#github-link {
+        border-color: #333;
+      }
     </style>
   </head>
   <body>
     <canvas id="app"></canvas>
+    <a id="github-link" href="https://github.com/fabioarnold/MiniCity">Source on GitHub</a>
     <script type="module" src="/src/main.ts" defer></script>
   </body>
 </html>

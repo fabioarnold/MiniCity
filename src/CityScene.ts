@@ -24,8 +24,6 @@ const carNames = [
   "van",
 ];
 
-const attachCameraToCar = false;
-
 enum Tile {
   None,
   Street,
@@ -117,6 +115,7 @@ export default class CityScene extends THREE.Scene {
   private readonly gltfLoader = new GLTFLoader();
 
   private readonly camera: THREE.Camera;
+  private followCarIndex?: number;
   private carModels: THREE.Object3D[];
 
   private map: Tile[][];
@@ -252,15 +251,36 @@ export default class CityScene extends THREE.Scene {
     for (let i = 0; i < numCars; i++) {
       this.spawnRandomCar();
     }
-    if (attachCameraToCar) {
-      const car = this.cars[0];
-      car.object.add(this.camera);
-      this.camera.rotation.x = 0;
-      this.camera.position.y = 1;
-      this.camera.position.z = -1;
-    }
     if (debug) {
       this.setupScenario(0);
+    }
+  }
+
+  setCameraModeFree() {
+    if (this.followCarIndex !== undefined) {
+      this.cars[this.followCarIndex].object.remove(this.camera);
+      this.followCarIndex = undefined;
+    }
+  }
+
+  setCameraModeFollow() {
+    if (this.followCarIndex === undefined) {
+      this.followCarIndex = 0;
+      this.cars[this.followCarIndex].object.add(this.camera);
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.position.set(0, 1, -1);
+    }
+  }
+
+  cameraFollowNextCar() {
+    if (this.followCarIndex === undefined) {
+      this.setCameraModeFollow();
+    } else {
+      this.cars[this.followCarIndex].object.remove(this.camera);
+      this.followCarIndex = (this.followCarIndex + 1) % this.cars.length;
+      this.cars[this.followCarIndex].object.add(this.camera);
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.position.set(0, 1, -1);
     }
   }
 

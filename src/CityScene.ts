@@ -258,8 +258,14 @@ export default class CityScene extends THREE.Scene {
 
   setCameraModeFree() {
     if (this.followCarIndex !== undefined) {
+      let translation = new THREE.Vector3(),
+        rotation = new THREE.Quaternion(),
+        scale = new THREE.Vector3();
+      this.camera.matrixWorld.decompose(translation, rotation, scale);
       this.cars[this.followCarIndex].object.remove(this.camera);
       this.followCarIndex = undefined;
+      this.camera.position.set(translation.x, translation.y, translation.z);
+      this.camera.setRotationFromQuaternion(rotation);
     }
   }
 
